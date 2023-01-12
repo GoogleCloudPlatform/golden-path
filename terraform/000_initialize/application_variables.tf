@@ -1,0 +1,1 @@
+../shared/application_variables.tf

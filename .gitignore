@@ -1,0 +1,11 @@
+*.lock.hcl
+*.tfstate
+*.tfstate.backup
+*.tfstate.lock.info
+
+.local/
+.terraform/
+migrate
+
+ledger-service-mfit-report.json
+tfplan
