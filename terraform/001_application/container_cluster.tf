@@ -12,6 +12,9 @@ resource "google_container_cluster" "application" {
   }
   ip_allocation_policy {
   }
+  private_cluster_config {
+    enable_private_nodes = true
+  }
   release_channel {
     channel = "REGULAR"
   }

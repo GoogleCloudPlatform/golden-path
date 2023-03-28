@@ -79,3 +79,9 @@ resource "google_project_iam_member" "vm_service_logging_logwriter" {
   project = data.google_project.application.project_id
   role    = "roles/logging.logWriter"
 }
+
+resource "google_project_iam_member" "vm_service_monitoring_metricwriter" {
+  member  = google_service_account.vm_service.member
+  project = data.google_project.application.project_id
+  role    = "roles/monitoring.metricWriter"
+}

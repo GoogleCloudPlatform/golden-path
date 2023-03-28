@@ -11,11 +11,13 @@
 - New Google Cloud Project with no APIs enabled
 - `default` auto mode network
 - `roles/owner` IAM permissions on the project
+- `iam.disableServiceAccountKeyCreation` enforcement disabled or `roles/orgpolicy.policyAdmin`
 
 ### Create a new project
 
 - `roles/resourcemanager.projectCreator` IAM permissions on the folder specified
 - `roles/billing.user` IAM permissions on the billing account specified
+- `iam.disableServiceAccountKeyCreation` enforcement disabled after creation or `roles/orgpolicy.policyAdmin`
 
 ## Setup
 
@@ -178,7 +180,7 @@
 - Create the source connection profile
 
   ```
-  LEDGER_DB_HOST=$(gcloud compute instances describe ledger-database --format="value(networkInterfaces[0].accessConfigs.natIP)" --zone=${GKE_GP_ZONE}) && \
+  LEDGER_DB_HOST=$(gcloud compute instances describe ledger-database --format="value(networkInterfaces[0].networkIP)" --zone=${GKE_GP_ZONE}) && \
   gcloud database-migration connection-profiles create postgresql ledger-database-source \
   --host ${LEDGER_DB_HOST} \
   --password 'password' \
@@ -227,6 +229,7 @@
   ```
   gcloud database-migration connection-profiles create cloudsql ledger-database \
   --database-version POSTGRES_14 \
+  --private-network default \
   --region ${GKE_GP_REGION} \
   --source-id ledger-database-source \
   --tier db-custom-4-16384
@@ -270,7 +273,7 @@
   updateTime: 'YYYY-MM-DDTHH:MM:SS.NNNNNNZ'
   ```
 
-  > **The `state` needs to be `READY` before the migration can be started, this can take 10 - 20 minutes.**
+  > **The `state` needs to be `READY` before the migration can be started, this can take up to 20 minutes.**
   >
   > **You can proceed with the guide, there will be another step to verify the process is complete before starting the migration.**
   >
@@ -404,18 +407,6 @@
 
   ```
   watch --color --interval 5 --no-title "gcloud database-migration connection-profiles describe ledger-database --region ${GKE_GP_REGION} | GREP_COLOR='01;92' egrep --color=always -e '^' -e 'READY'"
-  ```
-
-#### Configure connectivity
-
-- Create a firewall rule to allow the Database Migration Service Cloud SQL instance to connect to the database
-
-  ```
-  DMS_CLOUD_SQL_ADDRESS=$(gcloud database-migration connection-profiles describe ledger-database --format="value(cloudsql.publicIp)" --region ${GKE_GP_REGION})&& \
-  gcloud compute firewall-rules create database-dms-instance \
-  --allow TCP:5432 \
-  --source-ranges ${DMS_CLOUD_SQL_ADDRESS}/32 \
-  --target-tags ledger-database
   ```
 
 #### Create a Migration Job
@@ -710,13 +701,6 @@
 
   > This command can throw `ERROR: (gcloud.sql.instances.delete) HTTPError 404: The Cloud SQL instance operation does not exist.`, but the connection will be deleted.
 
-- Delete the firewall rule
-
-  ```
-  gcloud compute firewall-rules delete database-dms-instance \
-  --quiet
-  ```
-
 ### Migrate the application
 
 #### Prepare the assessment tools
@@ -810,6 +794,12 @@
 - Review the **Fit Analysis Results** for **Containerize | Anthos and GKE** and **Containerize | GKE Autopilot**, notice it is an **Excellent fit** for both.
 
 #### Prepare the processing cluster
+
+- Disable the `iam.disableServiceAccountKeyCreation` organization policy if it has not already disabled. Requires the `roles/orgpolicy.policyAdmin` role
+
+  ```
+  gcloud resource-manager org-policies disable-enforce iam.disableServiceAccountKeyCreation --project ${GKE_GP_PROJECT_ID}
+  ```
 
 - Download the Service Account credentials
 
@@ -936,7 +926,7 @@
   > **When `STEP` is `GenerateMigrationPlan` and `STATUS` is `Completed`, the migration plan is complete. You can monitor the progress with the following:**
 
   ```
-  watch --color --interval 5 --no-title "migctl migration status ledger-service-migration | GREP_COLOR='01;92' egrep --color=always -e '^' -e 'GenerateMigrationPlan' -e 'Completed'"
+  watch --color --interval 5 --no-title "migctl migration status ledger-service-migration | GREP_COLOR='01;92' egrep --color=always -e '^' -e 'GenerateMigrationPlan[[:space:]]+Completed'"
   ```
 
 - The status of the migration can also be viewed on the [Migrate to Containers](https://console.cloud.google.com/kubernetes/migrate/migrations) page
@@ -969,6 +959,7 @@
 - Add the following to end of the `ledger-service-migration.yaml` file
 
   ```
+  cat <<EOF >> ledger-service-migration.yaml
     endpoints:
     - name: ledger-service
       port: 8080
@@ -977,6 +968,7 @@
     - appName: ledger-service
       globs:
       - /var/log/monolith.log
+  EOF
   ```
 
 - Update the migration plan
@@ -1088,7 +1080,7 @@
   kubectl --namespace application edit configmap service-api-config
   ```
 
-  Change `ledger-service.c.<Project ID>.internal` to `ledger-service`
+  Change `ledger-service.<zone>.c.<project-id>.internal` to `ledger-service`
 
   ```
   data:
@@ -1137,6 +1129,12 @@
   ```
 
 ## Cleanup Migration Infrastructure
+
+- Enable the `iam.disableServiceAccountKeyCreation` organization policy if it was disabled. Requires the `roles/orgpolicy.policyAdmin` role
+
+  ```
+  gcloud resource-manager org-policies enable-enforce iam.disableServiceAccountKeyCreation --project ${GKE_GP_PROJECT_ID}
+  ```
 
 - Destroy the migration infrastructure
 

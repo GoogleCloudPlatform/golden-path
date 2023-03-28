@@ -15,6 +15,7 @@ resource "google_project_service" "cloudtrace_googleapis_com" {
 
 resource "google_project_service" "compute_googleapis_com" {
   disable_dependent_services = true
+  disable_on_destroy         = false
   service                    = "compute.googleapis.com"
 }
 
@@ -25,6 +26,11 @@ resource "google_project_service" "container_googleapis_com" {
   service                    = "container.googleapis.com"
 }
 
+resource "google_project_service" "iap_googleapis_com" {
+  disable_dependent_services = true
+  service                    = "iap.googleapis.com"
+}
+
 resource "google_project_service" "servicecontrol_googleapis_com" {
   disable_dependent_services = true
   service                    = "servicecontrol.googleapis.com"
@@ -33,6 +39,11 @@ resource "google_project_service" "servicecontrol_googleapis_com" {
 resource "google_project_service" "servicemanagement_googleapis_com" {
   disable_dependent_services = true
   service                    = "servicemanagement.googleapis.com"
+}
+
+resource "google_project_service" "servicenetworking_googleapis_com" {
+  disable_dependent_services = true
+  service                    = "servicenetworking.googleapis.com"
 }
 
 resource "google_project_service" "sqladmin_googleapis_com" {

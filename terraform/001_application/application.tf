@@ -1,5 +1,5 @@
 locals {
-  service_internal_fqdn          = "${google_compute_instance.service.name}.c.${data.google_project.application.project_id}.internal:8080"
+  service_internal_fqdn          = "${google_compute_instance.service.name}.${google_compute_instance.service.zone}.c.${data.google_project.application.project_id}.internal:8080"
   application_config_file        = "extras/cloudsql/kubernetes-manifests/config.yaml"
   application_contacts_yaml      = "extras/cloudsql/kubernetes-manifests/contacts.yaml"
   application_jwt_secret_file    = "extras/cloudsql/kubernetes-manifests/jwt-secret.yaml"
@@ -37,9 +37,9 @@ echo "Configure database" && \
 sed -i 's|^\([[:blank:]]*\)ACCOUNTS_DB_URI: .*$|\1ACCOUNTS_DB_URI: ${local.database_account_db_url}|' ${local.application_config_file} && \
 sed -i 's|^\([[:blank:]]*\)POSTGRES_DB: .*$|\1POSTGRES_DB: ${local.database_ledger_db_name}|' ${local.application_config_file} && \
 sed -i 's|^\([[:blank:]]*\)POSTGRES_USER: .*$|\1POSTGRES_USER: ${local.database_admin_user_name}|' ${local.application_config_file} && \
-sed -i 's|^\([[:blank:]]*\)POSTGRES_PASSWORD: .*$|\1POSTGRES_PASSWORD: ${local.database_admin_password}|' ${local.application_config_file} && \
+sed -i 's|^\([[:blank:]]*\)POSTGRES_PASSWORD: .*$|\1POSTGRES_PASSWORD: "${local.database_admin_password}"|' ${local.application_config_file} && \
 sed -i 's|^\([[:blank:]]*\)SPRING_DATASOURCE_USERNAME: .*$|\1SPRING_DATASOURCE_USERNAME: ${local.database_admin_user_name}|' ${local.application_config_file} && \
-sed -i 's|^\([[:blank:]]*\)SPRING_DATASOURCE_PASSWORD: .*$|\1SPRING_DATASOURCE_PASSWORD: ${local.database_admin_password}|' ${local.application_config_file} && \
+sed -i 's|^\([[:blank:]]*\)SPRING_DATASOURCE_PASSWORD: .*$|\1SPRING_DATASOURCE_PASSWORD: "${local.database_admin_password}"|' ${local.application_config_file} && \
 echo "Enable Cymbal Bank branding" && \
 sed -i ':a;N;$!ba;s/# - name: CYMBAL_LOGO\n        #   value: "false"/- name: CYMBAL_LOGO\n          value: "true"/' ${local.application_frontend_yaml} && \
 echo "Configure service account" && \

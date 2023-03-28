@@ -24,7 +24,7 @@ EOT
 data "google_compute_image" "default" {
   depends_on = [google_project_service.compute_googleapis_com]
 
-  family  = "ubuntu-1804-lts"
+  family  = "ubuntu-2004-lts"
   project = "ubuntu-os-cloud"
 }
 
@@ -52,13 +52,13 @@ resource "google_compute_instance" "service" {
   }
   network_interface {
     network = "default"
-
-    access_config {
-    }
   }
   service_account {
     email  = google_service_account.vm_service.email
     scopes = ["cloud-platform"]
+  }
+  shielded_instance_config {
+    enable_secure_boot = true
   }
 }
 
@@ -82,9 +82,6 @@ resource "google_compute_instance" "database" {
   }
   network_interface {
     network = "default"
-
-    access_config {
-    }
   }
   scratch_disk {
     interface = "SCSI"
@@ -92,5 +89,8 @@ resource "google_compute_instance" "database" {
   service_account {
     email  = google_service_account.vm_database.email
     scopes = ["cloud-platform"]
+  }
+  shielded_instance_config {
+    enable_secure_boot = true
   }
 }
