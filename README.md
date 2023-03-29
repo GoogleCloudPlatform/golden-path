@@ -24,8 +24,8 @@
 - Clone the source repository
 
   ```
-  git clone --branch cymbal-bank --recurse-submodules https://github.com/arueth/gke-golden-path.git && \
-  cd gke-golden-path
+  git clone --branch gke-cymbal-bank --recurse-submodules https://github.com/GoogleCloudPlatform/golden-path.git && \
+  cd golden-path
   ```
 
 - Set the required environment variable
