@@ -14,6 +14,7 @@
 
 resource "google_project_service" "container_googleapis_com" {
   disable_dependent_services = true
+  disable_on_destroy         = false
   service                    = "container.googleapis.com"
 }
 
