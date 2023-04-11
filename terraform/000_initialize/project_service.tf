@@ -12,9 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-resource "google_compute_network" "default" {
-  depends_on = [google_project_service.compute_googleapis_com]
-
-  name    = "default"
-  project = google_project.application.project_id
+resource "google_project_service" "compute_googleapis_com" {
+  disable_dependent_services = true
+  disable_on_destroy         = false
+  service                    = "compute.googleapis.com"
 }
