@@ -232,7 +232,7 @@
   --private-network default \
   --region ${GKE_GP_REGION} \
   --source-id ledger-database-source \
-  --tier db-custom-4-16384
+  --tier db-custom-2-8192
   ```
 
   ```
