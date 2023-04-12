@@ -4,7 +4,7 @@
 
 > This guide is meant to be run from CloudShell in the Google Cloud Console.
 
-- Terraform `~> 1.3.5`
+- Terraform `">= 1.3.5, < 2.0.0"`
 
 ### Bring your own (BYO) project
 
