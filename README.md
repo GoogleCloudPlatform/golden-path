@@ -232,7 +232,7 @@
   --private-network default \
   --region ${GKE_GP_REGION} \
   --source-id ledger-database-source \
-  --tier db-custom-2-8192
+  --tier db-custom-4-16384
   ```
 
   ```
@@ -823,7 +823,7 @@
 - Install Migrate to Containers on the `processing-cluster`
 
   ```
-  migctl setup install --json-key=m2c-install.json
+  migctl setup install --json-key=m2c-install.json --version 1.14.0
   ```
 
   Output:
