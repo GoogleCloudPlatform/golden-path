@@ -1,5 +1,35 @@
 # GKE Golden Path: Cymbal Bank Ledger Monolith Migration
 
+## Overview
+
+Cymbal Bank's primary online banking application is migrating to Google Cloud. Currently, the application has several microservices running on Google Kubernetes Engine (GKE) along with a monolith and database still running on virtual machines.
+
+Migrating, optimizing, and modernizing the monolith and database will help Cymbal Bank to improve the performance and scalability of its online banking application. It will also help Cymbal Bank to take advantage of the latest features and services offered by Google Cloud.
+
+![Migrate->Optimize->Modernize](docs/img/migrate-optimize-modernize.png)
+
+### Migrate
+
+- Migrate the database to a managed service. This can be done by using the Database Migration Service (DMS) to migrate the database to Cloud SQL.
+
+- Migrate the monolith to GKE. This can be done by using Migrate to Containers (M2C) or by manually creating images and manifests. 
+
+### Optimize
+
+- Optimize the application by rightsizing the pod's resource requests and limits base on metrics and recommendations.
+
+- Optimize the database by rightsizing the instance based on metrics and recommendations.
+
+### Modernize
+
+- Modernize the database running on Cloud SQL, it can be modernized using tools like Cloud Spanner, Cloud Bigtable, or AlloyDB
+
+- Modernize the monolith running on GKE, it can be tuned for performance and scalability, put into a CI/CD workflow, or decoupled into microservices.
+
+### Existing Architecture
+
+![Cymbal Bank Existing Architecture](docs/img/cymbal-bank-existing-architecture.png)
+
 ## Requirements
 
 > This guide is meant to be run from CloudShell in the Google Cloud Console.
@@ -161,6 +191,8 @@
 
 - Got to the URL and verify the application is operational. Deposits funds and send payments, make note of your final balance.
 
+![Migrate](docs/img/migrate.png)
+
 ## Migrate
 
 - Deploy the migration infrastructure
@@ -173,7 +205,11 @@
   rm tfplan
   ```
 
+  > For more information about the migration infrastructure that is created. see [Migration Infrastructure](docs/migration-infrastructure.md)
+
 ### Migrate the database
+
+![Migrate the Database](docs/img/migrate-the-database.png)
 
 #### Create a source connection profile
 
@@ -703,6 +739,8 @@
 
 ### Migrate the application
 
+![Migrate the Application](docs/img/migrate-the-application.png)
+
 #### Prepare the assessment tools
 
 - Connect to the `ledger-service` instance
@@ -1127,6 +1165,142 @@
   --quiet \
   --zone ${GKE_GP_ZONE}
   ```
+
+### New Architecture
+
+![Cymbal Bank New Architecture](docs/img/cymbal-bank-new-architecture.png)
+
+![Optimize](docs/img/optimize.png)
+
+## Optimize
+
+### Optimize the application
+
+#### Analyze resource utilization
+
+- Go to the [Kubernetes Engine Workloads](https://console.cloud.google.com/kubernetes/workload/overview) page in the console
+
+  ```
+  echo -e "\Kubernetes Engine Overview: https://console.cloud.google.com/kubernetes/workload/overview?project=${GKE_GP_PROJECT_ID}\n"
+  ```
+
+- Click on the **ledger-service** workload
+
+  ![ledger-service](docs/img/gke-workload-ledger-service.png)
+
+- Click on **ACTIONS** at the top
+
+  ![ACTIONS](docs/img/gke-workload-deployment-actions.png)
+
+- Select **Scale** and click **Edit resource requests**
+
+  ![Edit resource requests](docs/img/gke-workload-deployment-actions-edit-resource-requests.png)
+
+- Review the CPU and Memory utilization of the workload
+
+  ![Workload Utilization](docs/img/gke-workload-deployment-utilization.png)
+
+#### Rightsizing the resource requests and limits
+
+After reviewing the CPU and Memory utilization of the workload you will notice that the current request and limit are much higher than what the workload has been utilizing.
+Based on the utilization data, GKE can make a suggestion as to what value to set for the resource request and limit.
+
+- In the **Adjust resource requests and limits** section you can see the current resource request and limit values along with the latest suggestion values.
+
+  ![Resource Suggestions](docs/img/gke-workload-deployment-resource-suggestions.png)
+
+  > Latest suggestions are based on your workload's latest usage patterns. See your workload's resource utilization data to determine if the latest suggestions are the best fit for your workload.
+
+- Set the new request and limit values
+  
+  | Attribute | Value |
+  |-----------|-------|
+  | CPU request 1 | 0.5 |
+  | CPU limit 1 | 0.5 |
+  | Memory request 1 | 2 |
+  | Memory limit 1 | 2 |
+
+  > Notice that a warning message is displayed regarding workloads running on autopilot clusters. Autopilot enforces minimum, maximum, and CPU to memory ratios for resources.
+  > When the suggested values are applied, the values may be modified to maintain these ratios and the step increments.
+  > See [Resource requests in Autopilot](https://cloud.google.com/kubernetes-engine/docs/concepts/autopilot-resource-requests) for additional information.
+
+- Click **SAVE CHANGES**
+
+  > You will be prompted to confirm that you want to save the changes and informed about possible disruption to your workload.
+  > We will cover [disruption budgets](https://cloud.google.com/architecture/best-practices-for-running-cost-effective-kubernetes-applications-on-gke#add-pod_disruption_budget-to-your-application)
+  > in the **Modernize** phase of this guide.
+
+- Click **CONFIRM** to apply the changes to the workload
+
+### Optimize the database
+
+#### Cloud SQL Monitoring Metrics
+
+Cloud SQL provides out of the box metrics for each instance. 
+
+- Go to the [Cloud SQL Instances](https://console.cloud.google.com/sql/instances) page in the console
+
+  ```
+  echo -e "\nCloud SQL Instances: https://console.cloud.google.com/sql/instances?project=${GKE_GP_PROJECT_ID}\n"
+  ```
+
+- Click the checkbox to the left of the `ledger-database` instance
+
+  ![ledger-database](docs/img/cloud-sql-ledger-database.png)
+
+- Review the metrics in the panel on the right side of the page
+
+  ![ledger-database metrics](docs/img/cloud-sql-ledger-database-metrics.png)
+
+- The metrics interval that is displayed can be adjust using the dropdown
+
+  ![interval dropdown](docs/img/cloud-sql-metric-interval-dropdown.png)
+
+#### Cloud SQL System Insights
+
+Cloud SQL has a System Insights page that provides a consolidated view of monitoring metrics for an instance. 
+
+- Go to the `ledger-database` [Cloud SQL System Insights](https://console.cloud.google.com/sql/instances/ledger-database/system-insights) page in the console
+
+  ```
+  echo -e "\nledger-database Cloud SQL System Insights: https://console.cloud.google.com/sql/instances/ledger-database/system-insights?project=${GKE_GP_PROJECT_ID}\n"
+  ```
+
+- Review the metrics
+
+  ![System Insights interval selector](docs/img/cloud-sql-system-insight-metrics.png)
+
+- The metrics interval that is displayed can be adjust using the selector in the upper right
+
+  ![System Insights interval selector](docs/img/cloud-sql-system-insight-interval-selector.png)
+
+#### Cloud SQL Recommendations
+
+[Recommender](https://cloud.google.com/recommender/docs/overview) is a service that provides recommendations and insights for using resources on Google Cloud. These recommendations and insights are per-product or per-service, and are generated based on heuristic methods, machine learning, and current resource usage. Cloud SQL has a set of cost and performance [recommenders](https://cloud.google.com/recommender/docs/recommenders) that can assist with optimizing your Cloud SQL instances. The recommendations are available via the console and `gcloud recommender`.
+
+#### Rightsizing the database instance
+
+Based on the monitoring metrics and system insights, we can see that our Cloud SQL instances is overprovisioned. We can adjust the instance size to optimize our utilization.
+
+- Patch the `ledger-database` instance's tier
+
+  ```
+  gcloud sql instances patch ledger-database \
+  --tier db-custom-2-8192
+  ```
+
+  ```
+  The following message will be used for the patch API method.
+  {"name": "ledger-database", "project": "<project-id>", "settings": {"tier": "db-custom-2-8192"}}
+  WARNING: This patch modifies a value that requires your instance to be restarted. Submitting this patch will immediately restart your instance if it's running.
+
+  Do you want to continue (Y/n)?  Y
+
+  Patching Cloud SQL instance...done.                                                                                                                                                                                                                                                                                        
+  Updated [https://sqladmin.googleapis.com/sql/v1beta4/projects/<project-id>"/instances/ledger-database].
+  ```
+
+  > While the instances is updated it will be in a read-only state. This operations should be performed during a maintenance window or scheduled downtime. 
 
 ## Cleanup Migration Infrastructure
 
