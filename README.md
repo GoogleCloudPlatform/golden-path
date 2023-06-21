@@ -12,7 +12,7 @@ Migrating, optimizing, and modernizing the monolith and database will help Cymba
 
 - Migrate the database to a managed service. This can be done by using the Database Migration Service (DMS) to migrate the database to Cloud SQL.
 
-- Migrate the monolith to GKE. This can be done by using Migrate to Containers (M2C) or by manually creating images and manifests. 
+- Migrate the monolith to GKE. This can be done by using Migrate to Containers (M2C) or by manually creating images and manifests.
 
 ### Optimize
 
@@ -1212,13 +1212,13 @@ Based on the utilization data, GKE can make a suggestion as to what value to set
   > Latest suggestions are based on your workload's latest usage patterns. See your workload's resource utilization data to determine if the latest suggestions are the best fit for your workload.
 
 - Set the new request and limit values
-  
-  | Attribute | Value |
-  |-----------|-------|
-  | CPU request 1 | 0.5 |
-  | CPU limit 1 | 0.5 |
-  | Memory request 1 | 2 |
-  | Memory limit 1 | 2 |
+
+  | Attribute        | Value |
+  | ---------------- | ----- |
+  | CPU request 1    | 0.5   |
+  | CPU limit 1      | 0.5   |
+  | Memory request 1 | 2     |
+  | Memory limit 1   | 2     |
 
   > Notice that a warning message is displayed regarding workloads running on autopilot clusters. Autopilot enforces minimum, maximum, and CPU to memory ratios for resources.
   > When the suggested values are applied, the values may be modified to maintain these ratios and the step increments.
@@ -1236,7 +1236,7 @@ Based on the utilization data, GKE can make a suggestion as to what value to set
 
 #### Cloud SQL Monitoring Metrics
 
-Cloud SQL provides out of the box metrics for each instance. 
+Cloud SQL provides out of the box metrics for each instance.
 
 - Go to the [Cloud SQL Instances](https://console.cloud.google.com/sql/instances) page in the console
 
@@ -1258,7 +1258,7 @@ Cloud SQL provides out of the box metrics for each instance.
 
 #### Cloud SQL System Insights
 
-Cloud SQL has a System Insights page that provides a consolidated view of monitoring metrics for an instance. 
+Cloud SQL has a System Insights page that provides a consolidated view of monitoring metrics for an instance.
 
 - Go to the `ledger-database` [Cloud SQL System Insights](https://console.cloud.google.com/sql/instances/ledger-database/system-insights) page in the console
 
@@ -1296,11 +1296,58 @@ Based on the monitoring metrics and system insights, we can see that our Cloud S
 
   Do you want to continue (Y/n)?  Y
 
-  Patching Cloud SQL instance...done.                                                                                                                                                                                                                                                                                        
+  Patching Cloud SQL instance...done.
   Updated [https://sqladmin.googleapis.com/sql/v1beta4/projects/<project-id>"/instances/ledger-database].
   ```
 
-  > While the instances is updated it will be in a read-only state. This operations should be performed during a maintenance window or scheduled downtime. 
+  > While the instances is updated it will be in a read-only state. This operations should be performed during a maintenance window or scheduled downtime.
+
+![Optimize](docs/img/modernize.png)
+
+## Modernize
+
+Modernizing an application can take many forms, from tuning an application to run more efficiently on modern infrastructure to breaking an application down into microservices to moving the application into a fully automated software delivery life cycle. In this guide, we will discuss some of the various design and architecture decisions that should be taken into consideration when deciding to modernize an application.
+
+The first step in modernizing an application is to assess its current state. This includes understanding the application's architecture, its current performance, and its security posture. Once you have a good understanding of the application's current state, you can begin to identify areas where modernization can improve the application's performance, security, or scalability.
+
+There are many different ways to modernize an application. Some common approaches include:
+
+- Migrating the application to a new programming language or framework
+- Refactoring the application to improve its performance or scalability
+- Decomposing the application into microservices
+- Automating the application's deployment and testing
+
+The best approach for modernizing an application will depend on the specific needs of the application and the organization.
+
+Once you have chosen an approach, you will need to make a number of design and architecture decisions. These decisions will impact the overall architecture of the modernized application, as well as its performance, security, and scalability.
+
+Some of the key design and architecture decisions that you will need to make include:
+
+- The choice of programming language and framework
+- The choice of cloud platform
+- The choice of deployment architecture
+- The choice of security mechanisms
+- The choice of monitoring and logging tools
+
+These decisions should be made in consultation with the application's stakeholders, including developers, architects, and security professionals.
+
+Modernizing an application can be a complex and challenging process. However, by carefully considering the design and architecture decisions, you can ensure that the modernized application meets the needs of the organization.
+
+### Scaling and Resiliency
+
+Now that our application has been running in GKE and we have metrics regarding its performance, we can consider using [replicas](https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/). Replicas ensure the redundancy of your workloads for improved performance and responsiveness, and to avoid a single point of failure. They can be used to control the number of pod replicas running at any given time. Together with [Horizontal Pod Autoscaling (HPA)](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/), the cluster can automatically scale the workload to match demand.
+
+Kubernetes offers features to help you run highly available applications even when you introduce frequent voluntary disruptions. As an application owner, you can create a [PodDisruptionBudget (PDB)](https://kubernetes.io/docs/tasks/run-application/configure-pdb/) for each application. A PDB limits the number, or percentage, of Pods of a replicated application that are down simultaneously from voluntary disruptions. For example, a web front end might want to ensure that the number of replicas serving load never falls below a certain percentage of the total. With PDB configured, Kubernetes will drain a node following the configured disruption schedule and new pods will be deployed on other available nodes. This approach ensures Kubernetes schedules workloads in an optimal way while controlling the disruption based on the PDB configuration.
+
+Sometimes, pods can be [disrupted](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/) unexpectedly. Kubernetes manage the shutdown process with [Lifecycle Hook](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/). By default, the [termination](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-termination) grace period is 30 seconds. This should be sufficient for most lightweight, cloud-native applications. However this might be too low for heavier applications or applications that have long shutdown processes. It is recommended that you evaluate your existing grace periods and tune them based on the specific needs of your architecture and application. You can change the termination grace period by altering `terminationGracePeriodSeconds` in the manifest.
+
+### Images
+
+In this guide we used Migrate to Containers to create the image for our application. For some types of workloads, Migrate to Containers can create some large sized images that are somewhat static. Depending on the level of continued engineering that will go into the application in the future, there are several approaches that can be taken to improve the image.
+
+In the event that a CI/CD pipeline is already in place to produce a deployable artifact for the application, the Migrate to Containers image can be modified to pull in the produced artifact. This allows the application to be developed in much the same way, but with the benefit of being containerized, with minimal effort.
+
+If the application is going to be actively developed, it might be worth considering a smaller, more workload specific base image for the application. A smaller image has security, performance, reliability, efficiency, and maintainability advantages that improve the overall development and deployment experience. This process involves creating a suitable base image that can be managed and maintained to meet your organization's requirements. Typically the whole build process for the application is containerized with a multi stage build utilizing either a builder and/or runtime image. This has the added benefit of centralizing all of the build logic.
 
 ## Cleanup Migration Infrastructure
 
